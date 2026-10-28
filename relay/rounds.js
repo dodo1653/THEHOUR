@@ -1,4 +1,4 @@
-// THE HOUR: one coin an hour. Coins are submitted with their pump.fun launch already signed by their creator,
+// Hourpad: one coin an hour. Coins are submitted with their pump.fun launch already signed by their creator,
 // against a durable nonce the creator's wallet owns, so the transaction stays valid until it is used. Anyone can
 // vote (one vote per voter and per address each hour). At the top of the hour the relay broadcasts the winner's own
 // signed launch; if it can't land (a copy appeared, the nonce moved), the next in line goes. Unlaunched submissions
