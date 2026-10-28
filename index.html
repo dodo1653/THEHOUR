@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Hour</title>
+<meta name="description" content="One coin an hour. Submit a coin, vote for the one you want, and at the top of the hour the winner launches on pump.fun, signed by its creator in advance.">
+<meta property="og:title" content="The Hour · one coin an hour">
+<meta property="og:description" content="Vote it. At :00 it launches on pump.fun.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hour.css">
+</head>
+<body>
+<header class="top">
+  <a class="word" href="#"><span>The</span> Hour</a>
+  <nav><a href="#running">In the running</a><a href="#hall">Hall of hours</a><a href="#how">How it works</a></nav>
+  <span class="live"><i id="liveDot"></i><span id="liveTxt">connecting</span></span>
+  <button class="go" id="bSubmit">Submit a coin</button>
+</header>
+
+<section class="hero">
+  <div class="copy">
+    <h1>One coin<br><em>an hour.</em></h1>
+    <p>Fourteen hundred coins launch on pump.fun every hour, and nobody sees yours. Here, coins are submitted and voted on, and at the top of the hour exactly one launches: the winner, signed in advance by its own creator, broadcast at <b>:00</b> on the dot.</p>
+    <div class="row"><button class="go big" id="bSubmit2">Submit a coin</button><a class="ghost" href="#running">Vote on this hour</a></div>
+  </div>
+  <div class="clock">
+    <div class="lbl">next launch</div>
+    <div class="digits mono" id="count">--:--</div>
+    <div class="at mono" id="atTxt">at --:00</div>
+    <div class="lead" id="lead"></div>
+  </div>
+</section>
+
+<section class="band" id="lastBand"></section>
+
+<section class="sec" id="running">
+  <div class="sh"><h2>In the running</h2><span class="mono dim" id="runMeta"></span></div>
+  <p class="dim note">One vote per person each hour, no wallet needed. Vote again to move it. The most votes at :00 launches; the rest stay in for up to three hours.</p>
+  <div class="grid" id="list"></div>
+</section>
+
+<section class="sec" id="hall">
+  <div class="sh"><h2>Hall of hours</h2><span class="mono dim">every hour's coin, and how it's doing</span></div>
+  <div class="hall" id="hallList"></div>
+</section>
+
+<section class="sec how" id="how">
+  <div class="sh"><h2>How it works</h2></div>
+  <div class="steps">
+    <div><b class="mono">01</b><h3>Submit</h3><p>Name, ticker, picture. Your wallet signs your coin's pump.fun launch now, against a durable nonce: a small account your wallet owns that keeps the signed launch valid until it's used. Copies of anything launched in the last hour, or already in the running, are refused.</p></div>
+    <div><b class="mono">02</b><h3>Vote</h3><p>Anyone votes, free, no wallet: your browser keeps a key that signs your vote. One vote per person and per connection each hour.</p></div>
+    <div><b class="mono">03</b><h3>:00</h3><p>At the top of the hour the relay broadcasts the winner's own signed launch. The coin goes live on pump.fun with its creator as the dev, even if they're asleep. If it can't land, the next in line launches.</p></div>
+    <div><b class="mono">04</b><h3>The hall</h3><p>Every hour's coin goes into the hall with its votes and its live market cap. The rest stay in the running for up to three hours; their votes start again each hour.</p></div>
+  </div>
+  <div class="facts">
+    <p><b>What it costs you.</b> The nonce account holds about 0.0015 SOL of rent, which is yours and comes back when you close it. Pump.fun's normal launch cost is paid only if your coin wins, from your wallet at :00, with your optional first buy. The Hour takes nothing.</p>
+    <p><b>Why a nonce.</b> A normal Solana transaction expires after about a minute. A durable nonce replaces that expiry with a value stored on-chain that only changes when the transaction is used, so your signed launch can wait for :00. Nobody else can change it, and nobody can alter the launch: any change breaks your signature.</p>
+    <p><b>If you change your mind.</b> Advance or close your nonce account from your wallet and your signed launch can never land.</p>
+    <p class="dim">Independent, not affiliated with pump.fun. Memecoins are extremely risky. Nothing here is financial advice.</p>
+  </div>
+</section>
+
+<aside class="sheet" id="sheet"><button class="x" id="sheetX">×</button>
+  <h2>Submit a coin</h2>
+  <p class="dim">Your coin waits, signed, until it wins an hour.</p>
+  <label>Name</label><input id="fName" maxlength="32">
+  <label>Ticker</label><input id="fSym" maxlength="10">
+  <label>One line about it</label><input id="fDesc" maxlength="280">
+  <label>Picture</label><input id="fImg" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><img id="fPrev" alt="">
+  <label>X link</label><input id="fX" placeholder="optional">
+  <label>Website</label><input id="fWeb" placeholder="optional">
+  <label>Your first buy at launch, SOL</label><input id="fBuy" type="number" min="0" step="0.01" placeholder="0">
+  <div class="checks">
+    <div class="ck"><i id="kW">○</i><span id="kWt">connect the wallet that will be the coin's dev</span></div>
+    <div class="ck"><i id="kC">○</i><span id="kCt">ticker and name: no copies</span></div>
+    <div class="ck"><i id="kN">○</i><span id="kNt">nonce account: created once, yours</span></div>
+    <div class="ck"><i id="kS">○</i><span id="kSt">sign the launch</span></div>
+  </div>
+  <button class="go big wide" id="fGo">Connect wallet</button>
+  <p class="dim small" id="fNote">Two signatures the first time (the nonce account, then the launch), one after that.</p>
+</aside>
+<div class="toast" id="toast"></div>
+<script type="module" src="hour.js"></script>
+</body></html>
