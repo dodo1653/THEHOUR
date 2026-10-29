@@ -99,10 +99,10 @@ window.renderFrame = (t) => {
     if (t < 2.05) {
       const p = seg(t, 0.25, 1.35)
       drawDots(dotsOf('1,400 COINS', 190, W / 2, 470, 7), p, CREAM, 2.6, 0)
-      drawDots(dotsOf('EVERY HOUR.', 190, W / 2, 650, 7), seg(t, 0.55, 1.6), ORANGE, 2.6, 14)
+      drawDots(dotsOf('EVERY HOUR', 190, W / 2, 650, 7), seg(t, 0.55, 1.6), ORANGE, 2.6, 14)
     } else {
       const p = seg(t, 2.02, 2.45), o = fade
-      g.globalAlpha = o; drawDots(dotsOf('NOBODY SEES', 170, W / 2, 470, 7), p, CREAM, 2.4, 0); drawDots(dotsOf('YOURS.', 170, W / 2, 640, 7), seg(t, 2.12, 2.55), '#ff3b2e', 2.4, 12); g.globalAlpha = 1
+      g.globalAlpha = o; drawDots(dotsOf('NOBODY SEES', 170, W / 2, 470, 7), p, CREAM, 2.4, 0); drawDots(dotsOf('YOURS', 170, W / 2, 640, 7), seg(t, 2.12, 2.55), '#ff3b2e', 2.4, 12); g.globalAlpha = 1
     }
   }
   // 2. the clock (2.9 .. 5.3): the Blender frames, then the hour lands
