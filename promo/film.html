@@ -1,0 +1,146 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hourpad film</title>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@600;800;900&family=Familjen+Grotesk:wght@500;700&family=Martian+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #070605; }
+  canvas { position: absolute; inset: 0; }
+  #clock { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; opacity: 0; }
+</style></head>
+<body>
+<img id="clock" alt="">
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>window.READY = false</script>
+<script type="module">
+// Hourpad, 10 s. Every frame drawn by renderFrame(t). The tickers in the flood are real pump.fun launches captured
+// from the relay; the clock is the Blender LED clock (brand/ledclock.py, count mode).
+const c = document.getElementById('c'), g = c.getContext('2d'), clock = document.getElementById('clock')
+const W = 1920, H = 1080, ORANGE = '#ff6a1a', CREAM = '#f1ece3'
+const DATA = await fetch('tickers.json').then((r) => r.json())
+const CRUDE = /(ASS|CUM|FUCK|SHIT|PORN|SEX|NIG|RAPE|DICK|COCK|TIT|PUSSY|BOOB|FAG|RETARD|JEW|HITLER|NAZI)/
+const TICK = DATA.tickers.filter((s) => !CRUDE.test(s)), COPIES = new Set(DATA.copies)
+const seg = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)))
+const eo = (x) => 1 - Math.pow(1 - x, 3), eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2)
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+
+// ---- the flood: columns of real tickers falling, faster and faster
+const COLS = 34, flood = []
+for (let i = 0; i < COLS; i++) { const items = []; for (let k = 0; k < 40; k++) items.push(TICK[Math.floor(rnd() * TICK.length)]); flood.push({ x: 20 + i * 56.5, off: rnd() * 2000, speed: 0.6 + rnd() * 0.8, items }) }
+
+// ---- dot text: sample a Doto rendering into dots, then fly dots into place
+const dotCache = new Map()
+function dotsOf(text, size, cx, cy, step) {
+  const key = text + size + cx + cy; if (dotCache.has(key)) return dotCache.get(key)
+  const o = document.createElement('canvas'); o.width = W; o.height = H; const q = o.getContext('2d')
+  q.font = `900 ${size}px Doto`; q.textAlign = 'center'; q.textBaseline = 'middle'; q.fillStyle = '#fff'; q.fillText(text, cx, cy)
+  const d = q.getImageData(0, 0, W, H).data, pts = []
+  for (let y = 0; y < H; y += step) for (let x = 0; x < W; x += step) if (d[(y * W + x) * 4 + 3] > 140) pts.push([x, y, rnd() * W, rnd() * H, rnd()])
+  dotCache.set(key, pts); return pts
+}
+function drawDots(pts, p, color, r, glow) {
+  g.fillStyle = color; if (glow) { g.shadowColor = color; g.shadowBlur = glow }
+  for (const [x, y, sx, sy, d] of pts) {
+    const k = eo(seg(p, d * 0.35, d * 0.35 + 0.65)); if (k <= 0) continue
+    g.globalAlpha = Math.min(1, k * 1.4); g.beginPath(); g.arc(sx + (x - sx) * k, sy + (y - sy) * k, r, 0, 7); g.fill()
+  }
+  g.globalAlpha = 1; g.shadowBlur = 0
+}
+
+// ---- split-flap rows
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:.'
+function flapRow(text, x, y, t0, t, cell, accent) {
+  const n = text.length
+  for (let i = 0; i < n; i++) {
+    const cx = x + i * cell, settle = t0 + 0.05 + i * 0.022, ch = text[i]
+    if (t < t0 + i * 0.012) continue
+    const done = t >= settle
+    g.fillStyle = '#121110'; g.fillRect(cx, y, cell - 4, cell * 1.32)
+    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(cx, y + cell * 0.66 - 1, cell - 4, 2)
+    if (ch === ' ') continue
+    const shown = done ? ch : GLYPHS[Math.floor((t * 60 + i * 7) % GLYPHS.length)]
+    g.fillStyle = done ? (accent && accent.includes(i) ? ORANGE : CREAM) : 'rgba(241,236,227,.45)'
+    g.font = `600 ${cell * 0.86}px "Martian Mono"`; g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.fillText(shown, cx + (cell - 4) / 2, y + cell * 0.7)
+  }
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic'
+}
+function vignette(a) { const v = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.95); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${a})`); g.fillStyle = v; g.fillRect(0, 0, W, H) }
+function grain(t) { g.globalAlpha = 0.045; for (let i = 0; i < 900; i++) { const x = (Math.sin(i * 12.9898 + t * 77) * 43758.5453) % 1, y = (Math.sin(i * 78.233 + t * 31) * 12543.21) % 1; g.fillStyle = i % 2 ? '#fff' : '#000'; g.fillRect(Math.abs(x) * W, Math.abs(y) * H, 2, 2) } g.globalAlpha = 1 }
+
+const CLOCK_FRAMES = 72, CLOCK_T0 = 2.9
+const frames = []; for (let i = 0; i < CLOCK_FRAMES; i++) { const im = new Image(); im.src = `clock/c${String(i).padStart(3, '0')}.png`; frames.push(im) }
+await Promise.all(frames.map((im) => im.decode().catch(() => {})))
+await Promise.all(['900 190px Doto', '600 22px "Martian Mono"', '700 46px "Familjen Grotesk"'].map((f) => document.fonts.load(f)))
+await document.fonts.ready
+
+window.DURATION = 10
+window.renderFrame = (t) => {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.fillStyle = '#070605'; g.fillRect(0, 0, W, H)
+  clock.style.opacity = 0
+
+  // 1. the flood (0 .. 2.9)
+  if (t < 3.05) {
+    const freeze = seg(t, 2.0, 2.25), fade = 1 - seg(t, 2.7, 3.0)
+    const tt = t < 2.0 ? t : 2.0 + (t - 2.0) * (1 - freeze)
+    g.font = '600 19px "Martian Mono"'
+    for (const col of flood) {
+      const y0 = -col.off + (tt * tt * 520 + tt * 260) * col.speed
+      col.items.forEach((s, k) => {
+        const y = ((y0 + k * 46) % 1900) - 100; if (y < -30 || y > H + 30) return
+        const copy = COPIES.has(s) && t > 2.0
+        g.globalAlpha = fade * (copy ? 0.95 : 0.22 + 0.25 * Math.sin(k + col.x))
+        g.fillStyle = copy ? '#ff3b2e' : ORANGE
+        g.fillText('$' + s, col.x, y)
+        if (copy) { g.font = '600 12px "Martian Mono"'; g.fillText('COPY', col.x, y + 16); g.font = '600 19px "Martian Mono"' }
+      })
+    }
+    g.globalAlpha = 1
+    // the dark band behind the words
+    const band = seg(t, 0.25, 0.6) * fade; g.fillStyle = `rgba(7,6,5,${0.93 * band})`; g.fillRect(0, 300, W, 480)
+    if (t < 2.05) {
+      const p = seg(t, 0.25, 1.35)
+      drawDots(dotsOf('1,400 COINS', 190, W / 2, 470, 7), p, CREAM, 2.6, 0)
+      drawDots(dotsOf('EVERY HOUR.', 190, W / 2, 650, 7), seg(t, 0.55, 1.6), ORANGE, 2.6, 14)
+    } else {
+      const p = seg(t, 2.02, 2.45), o = fade
+      g.globalAlpha = o; drawDots(dotsOf('NOBODY SEES', 170, W / 2, 470, 7), p, CREAM, 2.4, 0); drawDots(dotsOf('YOURS.', 170, W / 2, 640, 7), seg(t, 2.12, 2.55), '#ff3b2e', 2.4, 12); g.globalAlpha = 1
+    }
+  }
+  // 2. the clock (2.9 .. 5.3): the Blender frames, then the hour lands
+  if (t >= CLOCK_T0 && t < 5.45) {
+    const f = Math.min(CLOCK_FRAMES - 1, Math.floor((t - CLOCK_T0) * 30))
+    g.globalAlpha = seg(t, CLOCK_T0, CLOCK_T0 + 0.25) * (1 - seg(t, 5.2, 5.45))
+    if (frames[f].complete) g.drawImage(frames[f], 0, 0, W, H)
+    g.globalAlpha = 1
+    const hit = CLOCK_T0 + 42 / 30                 // 00:00 lands
+    if (t > hit) { const k = Math.exp(-(t - hit) * 5); g.fillStyle = `rgba(255,120,40,${0.35 * k})`; g.fillRect(0, 0, W, H) }
+    g.font = '600 26px "Martian Mono"'; g.fillStyle = `rgba(241,236,227,${0.7 * seg(t, 3.1, 3.4) * (1 - seg(t, 5.1, 5.35))})`; g.textAlign = 'center'
+    g.fillText(t < hit ? 'NEXT DEPARTURE' : 'DEPARTED · ONE COIN, LIVE ON PUMP.FUN', W / 2, 980); g.textAlign = 'left'
+  }
+  // 3. the board (5.3 .. 8.1): what Hourpad is
+  if (t >= 5.3 && t < 8.25) {
+    const o = seg(t, 5.3, 5.45) * (1 - seg(t, 7.95, 8.25))
+    g.globalAlpha = o
+    g.fillStyle = '#0c0b0a'; g.fillRect(150, 150, W - 300, H - 300)
+    g.strokeStyle = '#2a2622'; g.lineWidth = 2; g.strokeRect(150, 150, W - 300, H - 300)
+    g.font = '600 22px "Martian Mono"'; g.fillStyle = '#ffb37a'; g.fillText('HOURPAD  ·  A PUMP.FUN LAUNCHPAD', 200, 215)
+    g.fillStyle = '#ffb37a'; g.textAlign = 'right'; g.fillText('DEPARTURES', W - 200, 215); g.textAlign = 'left'
+    g.fillStyle = '#2e2a25'; g.fillRect(200, 240, W - 400, 2)
+    const rows = [['ONE COIN. EVERY HOUR.', [0, 1, 2]], ['VOTED BY THE CROWD.', []], ['PRE-SIGNED: GUARANTEED TO LAUNCH.', [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30, 31]], ['NO COPIES. NO VAMPS.', [11, 12, 13, 14, 15, 16, 17, 18]]]
+    rows.forEach(([text, acc], i) => flapRow(text, 200, 290 + i * 150, 5.45 + i * 0.6, t, 45, acc))
+    g.globalAlpha = 1
+  }
+  // 4. the end card (8.1 .. 10)
+  if (t >= 8.1) {
+    const p = seg(t, 8.15, 9.1)
+    drawDots(dotsOf('HOURPAD', 300, W / 2, 470, 8), p, ORANGE, 3.2, 18)
+    const s = seg(t, 9.0, 9.4)
+    g.globalAlpha = s; g.font = '700 46px "Familjen Grotesk"'; g.fillStyle = CREAM; g.textAlign = 'center'
+    g.fillText('one coin, every hour.  a pump.fun launchpad.', W / 2, 700)
+    g.font = '600 30px "Martian Mono"'; g.fillStyle = '#ffb37a'; g.fillText('$HOURPAD', W / 2, 780); g.textAlign = 'left'; g.globalAlpha = 1
+  }
+  vignette(0.6); grain(t)
+  g.globalAlpha = seg(t, 9.7, 10); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1
+}
+window.renderFrame(0); window.READY = true
+</script>
+</body></html>

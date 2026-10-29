@@ -10,27 +10,25 @@
 <link rel="stylesheet" href="hour.css">
 </head>
 <body>
-<header class="top">
+<div class="navwrap"><header class="top">
   <a class="word" href="#"><span class="dot">HOUR</span><span class="pad">PAD</span></a>
-  <span class="tagline">a pump.fun launchpad</span>
   <nav><a href="#running">In the running</a><a href="#hall">Departures</a><a href="#how">How it works</a></nav>
   <span class="live"><i id="liveDot"></i><span id="liveTxt">connecting</span></span>
   <button class="go" id="bSubmit">Launch a coin</button>
-</header>
+</header></div>
 
 <section class="hero">
-  <div class="copy">
-    <div class="eyebrow">the launchpad that launches one coin an hour</div>
-    <h1>One coin.<br><span class="hl">Every hour.</span></h1>
-    <p>Pump.fun launches 1,400 coins an hour, and nobody sees yours. Hourpad launches <b>one</b>. Submit your coin and your launch is signed in advance; the crowd votes; at <b>:00</b> the winner goes live on pump.fun, on the dot, with every eye on the same coin at the same second.</p>
-    <div class="row"><button class="go big" id="bSubmit2">Launch a coin</button><a class="ghost" href="#running">Vote on this hour</a></div>
+  <div class="stage" id="stage">
+    <canvas id="net"></canvas>
+    <img class="clockimg" id="clockImg" src="assets/clock.png" alt="">
+    <div class="node out" id="outNode"><span class="pillic"><i></i></span><div><b>pump.fun</b><span>departs at :00</span></div></div>
   </div>
-  <div class="board">
-    <div class="bhead"><span>NEXT DEPARTURE</span><span class="mono" id="atTxt">--:00</span></div>
-    <div class="clock"><span class="ghost88">88:88</span><span class="digits" id="count">--:--</span></div>
-    <div class="bmeta mono" id="metaTxt">0 in the running · 0 votes</div>
-    <div class="lead" id="lead"></div>
-  </div>
+  <div class="eyebrow center">a pump.fun launchpad</div>
+  <h1 class="headline">One coin.<br><span>Every hour.</span></h1>
+  <p class="sub">The launchpad that launches exactly one coin an hour. Voted by the crowd, signed in advance by its creator, guaranteed to launch at :00. No copies, no vamps.</p>
+  <div class="cta"><button class="go big" id="bSubmit2">Launch a coin</button><a class="ghost" href="#how">How it works</a></div>
+  <div class="depart"><span class="eyebrow">next departure</span><span class="dep" id="count">--:--</span><span class="mono dim" id="atTxt">--:00</span><i></i><span class="mono dim" id="metaTxt"></span></div>
+  <div class="lead" id="lead"></div>
 </section>
 
 <section class="band" id="lastBand"></section>

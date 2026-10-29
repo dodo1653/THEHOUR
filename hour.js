@@ -43,7 +43,7 @@ function paint() {
 setInterval(() => {
   const end = st ? st.closes : Math.ceil(Date.now() / 3600_000) * 3600_000, left = Math.max(0, end - Date.now())
   $('count').textContent = `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`
-  $('count').className = 'digits mono' + (left < 60_000 ? ' soon' : '')
+  $('count').className = 'dep' + (left < 60_000 ? ' soon' : '')
   if (st && Date.now() > st.closes + 3000 && Date.now() - lastPull > 2000) { lastPull = Date.now(); pull() }   // straight after :00, the winner
 }, 250)
 let lastPull = 0
@@ -161,3 +161,60 @@ $('fGo').onclick = async () => {
   } catch (e) { toast(String(e.message || e).slice(0, 220), true) }
   note.textContent = 'Two signatures the first time (the nonce account, then the launch), one after that.'; b.disabled = false
 }
+
+// ---------------------------------------------------------------- the hero: coins flow into the clock, one leaves for pump.fun
+const stage = $('stage'), net = $('net'), nctx = net.getContext('2d')
+const SW = 1120, SH = 350, IN_L = [390, 140], IN_R = [730, 124], OUT = [734, 166], OUTNODE = [978, 244]
+const SLOTS = [[130, 110], [270, 40], [170, 262], [325, 318], [880, 46], [1020, 112]]
+const CRUDE = /(ASS|CUM|FUCK|SHIT|PORN|SEX|NIG|RAPE|DICK|COCK|TIT|PUSSY|BOOB|FAG|RETARD|HITLER|NAZI)/i
+const outNode = $('outNode'); Object.assign(outNode.style, { left: OUTNODE[0] + 'px', top: OUTNODE[1] + 'px' })
+let nodes = [], fireAt = 0
+function fitStage() {
+  const s = Math.min(1, (innerWidth - 24) / SW); stage.style.transform = `scale(${s})`; stage.style.marginBottom = `${-(1 - s) * SH}px`
+  const d = devicePixelRatio || 1; net.width = SW * d; net.height = SH * d; nctx.setTransform(d, 0, 0, d, 0, 0)
+}
+addEventListener('resize', fitStage); fitStage()
+async function heroNodes() {
+  // the coins in the running first, then the newest real launches on pump.fun (no copies)
+  const pick = (st?.list || []).filter((c) => c.image).map((c) => ({ img: c.image, tk: c.symbol, running: true }))
+  if (pick.length < SLOTS.length) {
+    const b = await get('board', 'n=40&sort=new').catch(() => null)
+    for (const c of b?.coins || []) if (pick.length < SLOTS.length && c.img && !c.copyOf && !CRUDE.test(c.symbol + ' ' + c.name) && !pick.some((x) => x.tk === c.symbol)) pick.push({ img: c.img, tk: c.symbol, running: false })
+  }
+  const key = pick.map((x) => x.tk).join(',')
+  if (key === heroNodes.key) return; heroNodes.key = key
+  nodes.forEach((n) => n.el.remove())
+  nodes = pick.slice(0, SLOTS.length).map((c, i) => {
+    const el = document.createElement('div'); el.className = 'node wrap' + (c.running ? ' lit' : '')
+    const [x, y] = SLOTS[i]; Object.assign(el.style, { left: x + 'px', top: y + 'px' })
+    el.innerHTML = `<img src="${esc(c.img)}" alt="" loading="lazy"><span class="tk">$${esc(String(c.tk).replace(/^\$+/, '').slice(0, 10))}</span>`
+    stage.appendChild(el)
+    return { el, x, y, running: c.running, phase: Math.random(), to: x < SW / 2 ? IN_L : IN_R }
+  })
+}
+const bez = (p0, c1, c2, p1, t) => { const u = 1 - t; return [u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p1[0], u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p1[1]] }
+const curveOf = (from, to) => { const mx = (from[0] + to[0]) / 2; return [from, [mx, from[1]], [mx, to[1]], to] }
+function drawNet(t) {
+  nctx.clearRect(0, 0, SW, SH)
+  const glowDot = (x, y, r, col) => { const g = nctx.createRadialGradient(x, y, 0, x, y, r * 5); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); nctx.fillStyle = g; nctx.beginPath(); nctx.arc(x, y, r * 5, 0, 7); nctx.fill(); nctx.fillStyle = '#fff'; nctx.beginPath(); nctx.arc(x, y, r * 0.6, 0, 7); nctx.fill() }
+  for (const n of nodes) {
+    const c = curveOf([n.x, n.y], n.to)
+    nctx.strokeStyle = n.running ? 'rgba(255,140,70,.28)' : 'rgba(255,255,255,.11)'; nctx.lineWidth = 1.2
+    nctx.beginPath(); nctx.moveTo(...c[0]); nctx.bezierCurveTo(...c[1], ...c[2], ...c[3]); nctx.stroke()
+    const k = ((t / 2600) + n.phase) % 1, [px, py] = bez(...c, k)
+    glowDot(px, py, n.running ? 2.6 : 2, n.running ? 'rgba(255,106,26,.55)' : 'rgba(255,255,255,.35)')
+  }
+  // the one line out: a calm pulse, and a burst when an hour departs
+  const o = curveOf(OUT, [OUTNODE[0] - 70, OUTNODE[1]])
+  const firing = t - fireAt < 2200
+  nctx.strokeStyle = firing ? 'rgba(255,106,26,.9)' : 'rgba(255,106,26,.45)'; nctx.lineWidth = firing ? 2.4 : 1.6
+  nctx.beginPath(); nctx.moveTo(...o[0]); nctx.bezierCurveTo(...o[1], ...o[2], ...o[3]); nctx.stroke()
+  const k = firing ? Math.min(1, (t - fireAt) / 900) : ((t / 3400) % 1)
+  const [qx, qy] = bez(...o, k); glowDot(qx, qy, firing ? 4 : 2.6, 'rgba(255,106,26,.7)')
+  outNode.classList.toggle('fire', firing)
+  requestAnimationFrame(drawNet)
+}
+requestAnimationFrame(drawNet)
+let lastHourSeen = null
+setInterval(() => { heroNodes(); if (st && lastHourSeen !== null && st.hour !== lastHourSeen) fireAt = performance.now(); if (st) lastHourSeen = st.hour }, 4000)
+setTimeout(heroNodes, 600)
